@@ -1,47 +1,131 @@
-# Agentops-lite
+# AgentOps Lite
+
 Lightweight agentic AI system demonstrating LLM tool-calling, enterprise workflow automation, and observable agent execution patterns.
 
-## Topics 
-- ai-agents
-- llm
-- agentic-ai
-- python
-- openai
-- tool-calling
-- prompt-engineering
-- generative-ai
+## Overview
 
-## Website 
+AgentOps Lite is a prototype AI agent designed to simulate enterprise customer support workflows. The system uses an LLM-powered decision engine to dynamically select and execute tools, enabling action-oriented responses rather than traditional chatbot-style interactions.
+
+The project demonstrates core concepts behind modern agentic systems, including:
+
+* LLM tool calling
+* Multi-step reasoning loops
+* Enterprise workflow automation
+* Structured agent observability
+* CRM-style support operations
 
 ## Architecture
+
+```text
             ┌──────────────────────┐
             │   User Query         │
             └─────────┬────────────┘
                       │
                       ▼
         ┌───────────────────────────┐
-        │   LLM Agent (GPT-4.1)     │
+        │   LLM Agent               │
         │  - Reasoning              │
         │  - Tool Selection         │
         └─────────┬─────────────────┘
-                  │ tool call
+                  │
                   ▼
      ┌──────────────────────────────┐
      │  Tool Execution Layer        │
-     │  - get_order_status          │
-     │  - issue_refund              │
-     │  - create_ticket             │
-     └─────────┬────────────────────┘
-               │ result
-               ▼
-     ┌──────────────────────────────┐
-     │  Observation Loop            │
-     │  (LLM re-evaluates state)    │
+     │  - Order Lookup             │
+     │  - Refund Processing        │
+     │  - Ticket Creation          │
      └─────────┬────────────────────┘
                │
                ▼
      ┌──────────────────────────────┐
-     │  Final Response + Trace      │
-     │  - Output                    │
-     │  - Tool History              │
+     │  Observation & Trace Layer   │
+     └─────────┬────────────────────┘
+               │
+               ▼
+     ┌──────────────────────────────┐
+     │  Final Response              │
+     │  + Execution Trace           │
      └──────────────────────────────┘
+```
+
+## Features
+
+### Agentic Decision Making
+
+The agent evaluates user requests and determines which actions should be taken using available tools.
+
+### Tool Calling
+
+Supports dynamic execution of business functions such as:
+
+* Order status retrieval
+* Refund processing
+* Support ticket creation
+
+### Observability
+
+Every execution generates a structured trace containing:
+
+* Tool calls
+* Arguments
+* Results
+* Final response
+
+### Enterprise Workflow Simulation
+
+Models common customer support workflows found in CRM and service operations environments.
+
+## Example Workflow
+
+### Input
+
+> My order is delayed and I would like a refund.
+
+### Agent Actions
+
+1. Retrieve order status
+2. Verify eligibility
+3. Process refund
+4. Generate customer response
+
+### Output
+
+```json
+{
+  "tool": "issue_refund",
+  "order_id": "1001",
+  "refund_status": "approved"
+}
+```
+
+## Project Structure
+
+```text
+agentops-lite/
+├── README.md
+├── requirements.txt
+├── .env.example
+├── src/
+├── data/
+├── examples/
+└── diagrams/
+```
+
+## Tech Stack
+
+* Python
+* OpenAI API
+* Function Calling
+* JSON Tool Schemas
+
+## Future Improvements
+
+* Multi-agent workflows
+* Human-in-the-loop escalation
+* Vector database memory
+* Web UI dashboard
+* CRM integration layer
+
+## Motivation
+
+This project was built to explore how modern AI agents move beyond conversational interfaces and interact directly with business workflows through structured tool execution and reasoning loops.
