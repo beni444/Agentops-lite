@@ -1,0 +1,10 @@
+{
+  "customers": [
+    {"id": "C001", "tier": "gold"},
+    {"id": "C002", "tier": "standard"}
+  ],
+  "orders": [
+    {"id": "1001", "status": "delayed"},
+    {"id": "1002", "status": "delivered"}
+  ]
+}
