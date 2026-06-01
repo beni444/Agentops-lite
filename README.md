@@ -31,9 +31,9 @@ The project demonstrates core concepts behind modern agentic systems, including:
                   ▼
      ┌──────────────────────────────┐
      │  Tool Execution Layer        │
-     │  - Order Lookup             │
-     │  - Refund Processing        │
-     │  - Ticket Creation          │
+     │  - Order Lookup              │
+     │  - Refund Processing         │
+     │  - Ticket Creation           │
      └─────────┬────────────────────┘
                │
                ▼
