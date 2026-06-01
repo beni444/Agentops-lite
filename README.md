@@ -75,11 +75,10 @@ Every execution generates a structured trace containing:
 
 Models common customer support workflows found in CRM and service operations environments.
 
-## Example Workflow
+## Example Agent Workflow
 
-### Input
-
-> My order is delayed and I would like a refund.
+The repository includes a complete example execution trace:
+examples/refund_workflow_trace.json
 
 ### Agent Actions
 
@@ -129,3 +128,6 @@ agentops-lite/
 ## Motivation
 
 This project was built to explore how modern AI agents move beyond conversational interfaces and interact directly with business workflows through structured tool execution and reasoning loops.
+
+### Note :
+The demo uses the Gemini free tier, so API rate limits may apply during repeated testing.

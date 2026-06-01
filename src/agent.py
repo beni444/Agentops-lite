@@ -1,75 +1,228 @@
+import os
 import json
-from openai import OpenAI
+from dotenv import load_dotenv
+from google import genai
+from google.genai import types
 
 from tools import TOOLS
 from prompts import SYSTEM_PROMPT
 from trace import TraceLogger
 from config import MODEL_NAME
 
-client = OpenAI()
+load_dotenv()
 
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-def run_agent(user_input):
-    trace_logger = TraceLogger()
+CONFIRMATION_WORDS = ["yes", "confirm", "go ahead", "please issue", "approve", "do it"]
+STATE_CHANGING_TOOLS = {"issue_refund"}
 
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT},
-        {"role": "user", "content": user_input}
+def is_confirmed(user_input):
+    return any(word in user_input.lower() for word in CONFIRMATION_WORDS)
+
+def build_tool_declarations():
+    return [
+        types.Tool(
+            function_declarations=[
+                types.FunctionDeclaration(
+                    name="get_order_status",
+                    description="Get the current status of a customer order.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "order_id": {
+                                "type": "string",
+                                "description": "The customer order ID."
+                            }
+                        },
+                        "required": ["order_id"],
+                    },
+                ),
+                types.FunctionDeclaration(
+                    name="check_refund_eligibility",
+                    description="Check whether an order is eligible for a refund before processing it.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "order_id": {
+                                "type": "string",
+                                "description": "The customer order ID."
+                            }
+                        },
+                        "required": ["order_id"],
+                    },
+                ),
+                types.FunctionDeclaration(
+                    name="check_return_eligibility",
+                    description="Check whether an order is eligible for return.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "order_id": {
+                                "type": "string",
+                                "description": "The customer order ID."
+                            }
+                        },
+                        "required": ["order_id"],
+                    },
+                ),
+                types.FunctionDeclaration(
+                    name="issue_refund",
+                    description="Issue a refund for an eligible order.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "order_id": {
+                                "type": "string",
+                                "description": "The customer order ID."
+                            }
+                        },
+                        "required": ["order_id"],
+                    },
+                ),
+                types.FunctionDeclaration(
+                    name="create_ticket",
+                    description="Create a customer support ticket.",
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "issue": {
+                                "type": "string",
+                                "description": "The customer issue to log."
+                            }
+                        },
+                        "required": ["issue"],
+                    },
+                ),
+            ]
+        )
     ]
 
-    response = client.chat.completions.create(
-        model=MODEL_NAME,
-        messages=messages,
-        tools=[],
-        tool_choice="auto"
-    )
 
-    msg = response.choices[0].message
+def extract_function_call(response):
+    try:
+        candidate = response.candidates[0]
+        for part in candidate.content.parts:
+            if getattr(part, "function_call", None):
+                return part.function_call
+    except Exception:
+        return None
+
+    return None
+
+
+def run_agent(user_input, conversation_history):
+    trace_logger = TraceLogger()
 
     print("\n🧠 AGENT START")
     print("User:", user_input)
 
-    # TOOL LOOP
-    while hasattr(msg, "tool_calls") and msg.tool_calls:
+    conversation_history.append(
+        types.Content(
+            role="user",
+            parts=[types.Part(text=user_input)]
+        )
+    )
 
-        for tool_call in msg.tool_calls:
-            name = tool_call.function.name
-            args = json.loads(tool_call.function.arguments)
+    config = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        tools=build_tool_declarations(),
+    )
 
-            print(f"\n🔧 Tool: {name} | Args: {args}")
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=conversation_history,
+        config=config,
+    )
 
-            result = TOOLS[name](**args)
+    function_call = extract_function_call(response)
 
-            trace_logger.log_tool_call(name, args, result)
+    while function_call:
+        tool_name = function_call.name
+        tool_args = dict(function_call.args)
 
-            messages.append(msg)
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": json.dumps(result)
-            })
+        print(f"\n🔧 Tool: {tool_name} | Args: {tool_args}")
 
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=messages,
-            tools=[],
-            tool_choice="auto"
+        if tool_name not in TOOLS:
+            tool_result = {"error": f"Unknown tool: {tool_name}"}
+
+        elif tool_name in STATE_CHANGING_TOOLS and not is_confirmed(user_input):
+            final_output = (
+                f"I can help with that, but I need your confirmation before processing a refund "
+                f"for order {tool_args.get('order_id')}. Please confirm if you'd like me to proceed for a refund."
+            )
+
+            print("\n🧾 FINAL OUTPUT:")
+            print(final_output)
+
+            conversation_history.append(
+                types.Content(
+                    role="model",
+                    parts=[types.Part(text=final_output)]
+                )
+            )
+
+            return trace_logger.export(), conversation_history
+
+        else:
+            tool_result = TOOLS[tool_name](**tool_args)
+
+        print(f"📦 Result: {tool_result}")
+
+        trace_logger.log_tool_call(tool_name, tool_args, tool_result)
+
+        conversation_history.append(
+            types.Content(
+                role="model",
+                parts=[types.Part(function_call=function_call)]
+            )
         )
 
-        msg = response.choices[0].message
+        conversation_history.append(
+            types.Content(
+                role="user",
+                parts=[
+                    types.Part(
+                        function_response=types.FunctionResponse(
+                            name=tool_name,
+                            response=tool_result,
+                        )
+                    )
+                ],
+            )
+        )
+
+        response = client.models.generate_content(
+            model=MODEL_NAME,
+            contents=conversation_history,
+            config=config,
+        )
+
+        function_call = extract_function_call(response)
+
+    final_output = response.text
+
+    conversation_history.append(
+        types.Content(
+            role="model",
+            parts=[types.Part(text=final_output)]
+        )
+    )
 
     print("\n🧾 FINAL OUTPUT:")
-    print(msg.content)
+    print(final_output)
 
     print("\n📊 TRACE:")
     print(trace_logger.export())
 
-    return trace_logger.export()
+    return trace_logger.export(), conversation_history
 
 
 if __name__ == "__main__":
+    conversation_history = []
+
     while True:
         q = input("\nEnter query (exit to stop): ")
-        if q == "exit":
+        if q.lower() == "exit":
             break
-        run_agent(q)
+
+        _, conversation_history = run_agent(q, conversation_history)

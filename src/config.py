@@ -1,1 +1,1 @@
-MODEL_NAME = "gpt-4.1-mini"
+MODEL_NAME = "gemini-2.5-flash"

@@ -1,10 +1,30 @@
 {
   "customers": [
     {"id": "C001", "tier": "gold"},
-    {"id": "C002", "tier": "standard"}
+    {"id": "C002", "tier": "standard"},
+    {"id": "C003", "tier": "silver"}
   ],
   "orders": [
-    {"id": "1001", "status": "delayed"},
-    {"id": "1002", "status": "delivered"}
+    {
+      "id": "1001",
+      "status": "delayed",
+      "days_late": 5,
+      "refund_eligible": true,
+      "return_eligible": true
+    },
+    {
+      "id": "1002",
+      "status": "delivered",
+      "days_late": 0,
+      "refund_eligible": false,
+      "return_eligible": true
+    },
+    {
+      "id": "1003",
+      "status": "in transit",
+      "days_late": 0,
+      "refund_eligible": false,
+      "return_eligible": false
+    }
   ]
 }
